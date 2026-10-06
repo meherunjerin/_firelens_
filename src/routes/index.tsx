@@ -1,24 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { SiteNav, Footer } from "@/components/fl/SiteNav";
+import { Hero } from "@/components/fl/Hero";
+import { Story } from "@/components/fl/Story";
+import { FireMap } from "@/components/fl/FireMap";
+import { Harmonization } from "@/components/fl/Harmonization";
+import { FireDNA } from "@/components/fl/FireDNA";
+import { Anomaly } from "@/components/fl/Anomaly";
+import { REGIONS } from "@/lib/firedata";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "FireLens — Is this fire normal?" },
+    { name: "description", content: "Harmonized MODIS + VIIRS fire intelligence: anomalies, explanations and responder priorities." },
+    { property: "og:title", content: "FireLens — Is this fire normal?" },
+    { property: "og:description", content: "Harmonized MODIS + VIIRS fire intelligence for NASA Space Apps 2026." },
+  ] }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const [focus, setFocus] = useState<string | null>(null);
+  const [rid, setRid] = useState("amazonas");
+  const region = REGIONS.find((r) => r.id === rid) ?? REGIONS[0]!;
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div>
+      <SiteNav /><Hero /><Story /><FireMap focus={focus} setFocus={setFocus} /><Harmonization />
+      <FireDNA region={region} setRegion={setRid} /><Anomaly region={region} setRegion={setRid} /><Footer />
     </div>
   );
 }

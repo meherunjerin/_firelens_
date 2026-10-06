@@ -48,7 +48,7 @@ export function Hero() {
             { v: 94, s: "/100", l: "Top priority score" },
           ].map((x) => (
             <div key={x.l} className="border-l border-fire/40 pl-4">
-              <div className="font-display text-3xl font-bold"><CountUp to={x.v} suffix={x.s} prefix={x.p} /></div>
+              <div className="font-display text-3xl font-bold"><CountUp to={x.v} suffix={x.s} prefix={x.p ?? ""} /></div>
               <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{x.l}</div>
             </div>
           ))}
