@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Reveal, SectionHead, useInView } from "./ui";
+import observation from "@/assets/amazon-observation.jpg";
 import { rng } from "@/lib/firedata";
 
 const steps = [
@@ -14,7 +15,7 @@ const steps = [
 
 export function Story() {
   return (
-    <section id="mission" className="relative mx-auto max-w-[1400px] px-6 py-32">
+    <section id="mission" className="section-divider relative mx-auto max-w-[1440px] px-6 py-24 md:px-12">
       <SectionHead index="01" eyebrow="The core story" title={<>From satellites<br />to <span className="text-fire-gradient">decisions.</span></>}
         sub="Two NASA instruments watch Earth burn every day. FireLens turns their raw detections into a judgement a responder can act on." />
       <div className="grid gap-16 lg:grid-cols-[1fr_1.2fr]">
@@ -50,8 +51,8 @@ function Merge() {
   const r = rng(7);
   const pts = Array.from({ length: 60 }, (_, i) => ({ x: 20 + r() * 60, y: 15 + r() * 70, m: i % 2 === 0 }));
   return (
-    <div ref={ref} className="corner-frame glass relative aspect-[4/3] overflow-hidden rounded-sm">
-      <div className="tech-grid absolute inset-0" />
+    <div ref={ref} className="observation-surface relative aspect-[4/3] overflow-hidden border-y border-border">
+      <img src={observation} alt="Illustrative satellite view of Amazon fires and river corridors" width={1536} height={1024} loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-55" /><div className="tech-grid absolute inset-0" />
       <div className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.2em] text-sat">Sensor fusion · live demo</div>
       <div className="absolute right-4 top-4 font-mono text-[10px] uppercase tracking-[0.2em]">
         <span className={merged ? "text-fire" : "text-muted-foreground"}>{merged ? "● Unified record" : "○ Two streams"}</span>
@@ -65,9 +66,9 @@ function Merge() {
               transitionDelay: `${(i % 12) * 30}ms` }} />
         );
       })}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-5">
+      <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 bg-background/80 p-5">
         <div className="font-mono text-[10px] uppercase tracking-widest text-sat/80">MODIS · 1 km</div>
-        <p className="max-w-xs text-center font-display text-lg font-bold">Two sensors. Different resolutions. <span className="text-fire">One consistent fire history.</span></p>
+        <p className="max-w-xs font-display text-base font-semibold">Two sensors. Different resolutions. <span className="text-fire">One consistent fire history.</span></p>
         <div className="font-mono text-[10px] uppercase tracking-widest text-ember">VIIRS · 375 m</div>
       </div>
     </div>

@@ -9,6 +9,8 @@ export const Route = createFileRoute("/firescope/$regionId")({
   head: () => ({ meta: [
     { title: "FireScope Region Detail — FireLens" },
     { name: "description", content: "Deep-dive fire intelligence for a single region." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
     { property: "og:title", content: "FireScope Region Detail — FireLens" },
     { property: "og:description", content: "Deep-dive fire intelligence for a single region." },
   ] }),
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/firescope/$regionId")({
 function Page() {
   const { regionId } = Route.useParams();
   const [id, setId] = useState(regionId);
-  const region = REGIONS.find((r) => r.id === id) ?? REGIONS[0]!;
+  const region = REGIONS.find((r) => r.id === id) ?? REGIONS[0];
+  if (!region) return null;
   return <div><SiteNav /><div className="pt-16"><FireDNA region={region} setRegion={setId} /><Anomaly region={region} setRegion={setId} /></div><Footer /></div>;
 }

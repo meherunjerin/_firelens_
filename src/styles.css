@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-display: "Archivo", "Archivo Expanded", system-ui, sans-serif;
-  --font-sans: "Archivo", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -47,18 +47,18 @@
 
 :root {
   --radius: 0.375rem;
-  --background: oklch(0.13 0.012 260);
+  --background: oklch(0.14 0.012 210);
   --foreground: oklch(0.95 0.01 80);
-  --card: oklch(0.17 0.015 260);
+  --card: oklch(0.18 0.015 210);
   --card-foreground: oklch(0.95 0.01 80);
-  --popover: oklch(0.17 0.015 260);
+  --popover: oklch(0.18 0.015 210);
   --popover-foreground: oklch(0.95 0.01 80);
   --primary: oklch(0.7 0.19 45);
   --primary-foreground: oklch(0.14 0.02 40);
-  --secondary: oklch(0.22 0.02 260);
+  --secondary: oklch(0.23 0.018 210);
   --secondary-foreground: oklch(0.92 0.01 80);
-  --muted: oklch(0.2 0.015 260);
-  --muted-foreground: oklch(0.65 0.02 250);
+  --muted: oklch(0.21 0.015 210);
+  --muted-foreground: oklch(0.72 0.02 210);
   --accent: oklch(0.78 0.13 215);
   --accent-foreground: oklch(0.14 0.02 240);
   --destructive: oklch(0.6 0.23 27);
@@ -74,7 +74,7 @@
   --sat: oklch(0.8 0.13 215);
   --sat-dim: oklch(0.55 0.1 230);
   --ok: oklch(0.75 0.14 160);
-  --panel: oklch(0.15 0.014 260 / 70%);
+  --panel: oklch(0.15 0.014 210 / 88%);
   --grid: oklch(0.8 0.1 215 / 7%);
   --forest: oklch(0.96 0.03 120);
   --forest-foreground: oklch(0.25 0.06 150);
@@ -95,7 +95,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0; }
 }
 
 @utility tech-grid {
@@ -163,3 +163,42 @@
 .in .draw path.d, .in .draw polyline.d, .draw.in path.d { animation: dash 2.4s ease forwards; }
 
 input[type="range"].fl-range { accent-color: var(--fire); }
+
+/* Orbital intelligence presentation */
+:root { --hero-shade: linear-gradient(90deg, var(--background) 0%, color-mix(in oklch,var(--background) 91%,transparent) 23%, color-mix(in oklch,var(--background) 30%,transparent) 62%,transparent 100%); --hero-floor: linear-gradient(0deg,var(--background),transparent 35%); --shadow-panel: 0 16px 60px color-mix(in oklch,var(--background) 80%,transparent); }
+html { scroll-padding-top: 100px; }
+body { overflow-x: clip; }
+button,a,input,select { -webkit-tap-highlight-color: transparent; }
+a,button { transition: color .2s,background .2s,border-color .2s,transform .2s; }
+::selection { background: var(--fire); color: var(--primary-foreground); }
+.earth-opening { min-height: 760px; height: auto; display: flex; flex-direction: column; justify-content: center; }
+.earth-image { object-position: 65% center; animation: earth-breathe 40s ease-in-out infinite alternate; }
+.earth-shade { background: var(--hero-shade); }
+.earth-shade::after { content:''; position:absolute; inset:0; background:var(--hero-floor); }
+.hero-question { font-size: 88px; line-height: 1.04; }
+.hero-target { top:48%; left:72%; color:var(--fire); }
+.hotspot-ring { position:absolute; width:54px; height:54px; left:-11px; top:-11px; border:1px solid var(--fire); border-radius:50%; animation:pulse-hot 3s ease-out infinite; }
+.orbital-track { right:-18%; top:11%; width:80%; aspect-ratio:1.4; border:1px solid color-mix(in oklch,var(--sat) 18%,transparent); border-radius:50%; transform:rotate(-28deg); }
+.satellite-flight { position:absolute; left:24%; top:5%; display:flex; align-items:center; gap:10px; color:var(--sat); font-family:var(--font-mono); font-size:9px; animation:satellite-traverse 14s ease-in-out infinite alternate; }
+.nav-link { position:relative; padding-block:8px; }
+.nav-link::after { content:''; position:absolute; bottom:0; left:0; height:1px; width:0; background:var(--fire); transition:width .3s; }
+.nav-link:hover::after { width:100%; }
+.section-divider { border-top:1px solid var(--border); }
+.observation-surface { background:var(--background); }
+.observation-surface::after { content:''; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 80px var(--background); }
+.chart-caption { display:flex; justify-content:space-between; gap:12px; padding-top:16px; border-top:1px solid var(--border); font-family:var(--font-mono); font-size:9px; text-transform:uppercase; color:var(--muted-foreground); }
+.dna-wheel { overflow:visible; }
+.dna-orbit { transform-origin:center; animation:orbit 90s linear infinite; }
+.map-workspace { min-height:650px; height: min(76vh,850px); }
+.map-toolbar { box-shadow:var(--shadow-panel); }
+.map-status { backdrop-filter:blur(12px); }
+.anomaly-surface { background:linear-gradient(180deg,color-mix(in oklch,var(--lava) 7%,var(--background)),var(--background)); }
+.response-row:hover { background:color-mix(in oklch,var(--sat) 5%,transparent); }
+@keyframes earth-breathe { to { transform:scale(1.04) translateX(-.8%); } }
+@keyframes satellite-traverse { to { transform:translate(130px,55px) rotate(8deg); } }
+@keyframes fade-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@media(min-width:1600px) { .earth-opening { min-height:850px; } }
+@media(max-width:767px) {
+ .earth-opening { min-height:820px; } .hero-question { font-size:60px; } .earth-image { object-position:60% center; opacity:.65; } .earth-shade { background:linear-gradient(90deg,var(--background),color-mix(in oklch,var(--background) 50%,transparent)); } .orbital-track { right:-50%; top:20%; width:110%; } .satellite-flight span { display:none; } .map-workspace { height:680px; min-height:680px; } .hero-metrics { max-width:390px; }
+}
+@media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } .reveal { opacity:1; transform:none; } }

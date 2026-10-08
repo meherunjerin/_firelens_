@@ -6,6 +6,8 @@ export const Route = createFileRoute("/data")({
   head: () => ({ meta: [
     { title: "About the Data — FireLens" },
     { name: "description", content: "How FireLens harmonizes MODIS and VIIRS fire observations." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
     { property: "og:title", content: "About the Data — FireLens" },
     { property: "og:description", content: "How FireLens harmonizes MODIS and VIIRS fire observations." },
   ] }),

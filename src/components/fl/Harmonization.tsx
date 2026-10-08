@@ -1,4 +1,5 @@
 import { useState } from "react";
+import observation from "@/assets/amazon-observation.jpg";
 import { rng } from "@/lib/firedata";
 import { Reveal, SectionHead } from "./ui";
 
@@ -7,11 +8,12 @@ export function Harmonization() {
   const r = rng(42);
   const fires = Array.from({ length: 40 }, () => ({ x: 10 + r() * 80, y: 10 + r() * 80 }));
   return (
-    <section className="mx-auto max-w-[1400px] px-6 py-28">
+    <section className="section-divider mx-auto max-w-[1440px] px-6 py-24 md:px-12">
       <SectionHead index="03" eyebrow="Sensor harmonization" title={<>Different eyes.<br /><span className="text-fire-gradient">One fire history.</span></>} />
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <Reveal>
-          <div className="corner-frame relative aspect-[16/10] select-none overflow-hidden rounded-sm border border-border bg-card">
+          <div className="observation-surface relative aspect-[16/10] select-none overflow-hidden border-y border-border bg-card">
+            <img src={observation} alt="Illustrative Amazon observation used for sensor resolution comparison" width={1536} height={1024} loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-45" />
             {/* MODIS: coarse cells */}
             <div className="tech-grid absolute inset-0" />
             <div className="absolute inset-0">
@@ -22,7 +24,7 @@ export function Harmonization() {
             </div>
             {/* VIIRS harmonized overlay clipped */}
             <div className="absolute inset-0 bg-card" style={{ clipPath: `inset(0 0 0 ${split}%)` }}>
-              <div className="tech-grid absolute inset-0" />
+              <img src={observation} alt="" width={1536} height={1024} loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-65" /><div className="tech-grid absolute inset-0" />
               {fires.map((f, i) => (
                 <span key={i} className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fire glow-fire" style={{ left: `${f.x}%`, top: `${f.y}%` }} />
               ))}
@@ -32,8 +34,8 @@ export function Harmonization() {
             </div>
             <input type="range" min={0} max={100} value={split} onChange={(e) => setSplit(+e.target.value)} aria-label="Compare MODIS and harmonized"
               className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" />
-            <span className="absolute left-3 top-3 glass rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-sat">MODIS · 1 km cells</span>
-            <span className="absolute right-3 top-3 glass rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-fire">Harmonized · 375 m</span>
+            <span className="absolute left-3 top-3 glass rounded-sm px-2 py-1 font-mono text-[8px] uppercase tracking-widest text-sat">MODIS · 1 km cells</span>
+            <span className="absolute right-3 top-3 glass rounded-sm px-2 py-1 font-mono text-[8px] uppercase tracking-widest text-fire">Harmonized · 375 m</span>
           </div>
         </Reveal>
         <div className="space-y-8">
