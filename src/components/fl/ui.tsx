@@ -47,13 +47,13 @@ export function CountUp({ to, duration = 1600, suffix = "", prefix = "", decimal
 
 export function SectionHead({ index, eyebrow, title, sub }: { index: string; eyebrow: string; title: ReactNode; sub?: ReactNode }) {
   return (
-    <Reveal className="mb-12 max-w-3xl">
+    <Reveal className="mb-12 max-w-4xl">
       <div className="eyebrow mb-4 flex items-center gap-3">
         <span className="text-muted-foreground">{index}</span>
         <span className="h-px w-10 bg-sat/50" />
         {eyebrow}
       </div>
-      <h2 className="text-4xl font-extrabold leading-[1.02] md:text-6xl">{title}</h2>
+      <h2 className="text-4xl font-semibold leading-[1.1] md:text-6xl">{title}</h2>
       {sub && <p className="mt-5 text-lg text-muted-foreground">{sub}</p>}
     </Reveal>
   );
@@ -64,7 +64,7 @@ export function Stat({ label, value, tone = "default" }: { label: string; value:
   return (
     <div className="border-l border-border pl-4">
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display text-2xl font-bold ${c}`}>{value}</div>
+      <div className={`mt-1 font-display text-2xl font-semibold break-words ${c}`}>{value}</div>
     </div>
   );
 }

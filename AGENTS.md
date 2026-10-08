@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep FireLens presentation in the shared fl components and global semantic tokens; this keeps the home and region-detail experiences consistent without changing demo data.
+- Use generated Earth observation assets as illustrative imagery, not as evidence data; this preserves the distinction between visual storytelling and deterministic demo observations.
