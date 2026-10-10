@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import worldMap from "@/assets/world-map.jpg";
 import { REGIONS, MONTHS, hotspotsForYear, project, severity, type Hotspot } from "@/lib/firedata";
 import { SectionHead } from "./ui";
+import { OrbitLoader } from "./OrbitLoader";
 import { Button } from "@/components/ui/button";
-import { Crosshair, Search, Layers, Globe, LoaderCircle } from "lucide-react";
+import { Crosshair, Search, Layers, Globe } from "lucide-react";
 
 const LAYERS = ["Harmonized", "MODIS Only", "VIIRS Only", "Historical Density", "Current Activity", "Recurring Zones", "Emerging Zones", "Responder Priority"] as const;
 type Layer = (typeof LAYERS)[number];
@@ -14,12 +15,12 @@ export function WorldCanvas({ hotspots, scale = 1, layer = "Harmonized", onHover
   const [loaded, setLoaded] = useState(false);
   return (
     <div className={`absolute inset-0 ${className}`}>
-      {!loaded && <div className="absolute inset-0 grid place-items-center bg-background"><div className="flex items-center gap-3 font-mono text-xs text-sat"><LoaderCircle className="animate-spin" size={18} />Acquiring Earth observation imagery</div></div>}
+      {!loaded && <div className="absolute inset-0 grid place-items-center bg-background"><OrbitLoader /></div>}
       <img onLoad={() => setLoaded(true)} src={worldMap} alt="Global Earth observation basemap" width={1920} height={960} loading="lazy" className={`absolute inset-0 h-full w-full object-fill ${dim ? "opacity-40" : "opacity-70"}`} />
       <div className="tech-grid absolute inset-0" />
       {layer === "Historical Density" && REGIONS.map((r) => {
         const p = project(r.lat, r.lon);
-        return <span key={r.id} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-fire/25 blur-xl"
+        return <span key={r.id} className="heat-intensity absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-fire/25 blur-xl"
           style={{ left: `${p.x}%`, top: `${p.y}%`, width: `${r.spread * 1.2 * (r.weight + 0.4)}%`, aspectRatio: "1" }} />;
       })}
       {hotspots.map((h) => {
@@ -31,12 +32,12 @@ export function WorldCanvas({ hotspots, scale = 1, layer = "Harmonized", onHover
           : h.sensor === "MODIS" && layer === "MODIS Only" ? "bg-sat" : h.intensity > 0.75 ? "bg-lava" : h.intensity > 0.5 ? "bg-fire" : "bg-ember";
         return (
           <span key={h.id} onMouseEnter={(e) => onHover?.(h, e)} onMouseLeave={() => onHover?.(null)}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full hover:ring-2 hover:ring-sat ${tone}`}
+            className={`hotspot-marker absolute -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full hover:ring-2 hover:ring-sat ${tone}`}
             style={{ left: `${p.x}%`, top: `${p.y}%`, width: sz, height: sz, opacity: 0.55 + h.intensity * 0.45,
               boxShadow: h.intensity > 0.7 ? "var(--glow-fire)" : undefined }} />
         );
       })}
-      {!showPriority && REGIONS.filter(r => r.anomaly >= 79).map(r => { const p = project(r.lat,r.lon); return <span key={r.id} className="anim-pulse-hot pointer-events-none absolute h-8 w-8 rounded-full border border-fire/65" style={{left:`${p.x}%`,top:`${p.y}%`,animationDelay:`${r.anomaly % 4}s`}} />; })}
+      {!showPriority && REGIONS.filter(r => r.anomaly >= 79).map(r => { const p = project(r.lat,r.lon); return <div key={r.id} className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={{left:`${p.x}%`,top:`${p.y}%`}}><span className="anim-pulse-hot absolute -left-4 -top-4 h-8 w-8 rounded-full border border-fire/65" style={{animationDelay:`${r.anomaly % 4}s`}} /></div>; })}
       {showPriority && [...REGIONS].sort((a, b) => b.priority - a.priority).slice(0, 5).map((r, i) => {
         const p = project(r.lat, r.lon);
         return (
@@ -55,9 +56,11 @@ export function FireMap({ focus, setFocus }: { focus: string | null; setFocus: (
   const [month, setMonth] = useState(7);
   const [layer, setLayer] = useState<Layer>("Harmonized");
   const [q, setQ] = useState("");
+  const [period, setPeriod] = useState<"selected" | "historical">("selected");
   const [hover, setHover] = useState<{ h: Hotspot; x: number; y: number } | null>(null);
 
-  const all = useMemo(() => hotspotsForYear(year), [year]);
+  const observationYear = period === "historical" ? 2010 : year;
+  const all = useMemo(() => hotspotsForYear(observationYear), [observationYear]);
   const hotspots = useMemo(() => {
     const mScale = 0.35 + 0.65 * Math.sin(((month + 1) / 12) * Math.PI);
     let hs = all.filter((_, i) => i % 100 < mScale * 100);
@@ -108,6 +111,10 @@ export function FireMap({ focus, setFocus }: { focus: string | null; setFocus: (
               </select>
               <Button variant="outline" size="sm" onClick={() => setFocus(null)} className="rounded-sm border border-input px-2 py-1.5 font-mono text-xs hover:border-sat hover:text-sat"><Globe size={12} /> Global</Button>
             </div>
+            <div className="mt-3 grid grid-cols-2 border border-input rounded-sm" role="group" aria-label="Observation period">
+              <Button size="sm" variant="ghost" aria-pressed={period === "historical"} onClick={() => setPeriod("historical")} className={`rounded-none px-1 font-mono text-[9px] ${period === "historical" ? "bg-sat/15 text-sat" : "text-muted-foreground"}`}>History · 2010</Button>
+              <Button size="sm" variant="ghost" aria-pressed={period === "selected"} onClick={() => setPeriod("selected")} className={`rounded-none px-1 font-mono text-[9px] ${period === "selected" ? "bg-fire/15 text-fire" : "text-muted-foreground"}`}>Selected · {year}</Button>
+            </div>
             <label className="mt-3 block md:hidden"><span className="mb-1 block font-mono text-[9px] text-muted-foreground">LAYERS</span><select aria-label="Map layer" value={layer} onChange={e=>setLayer(e.target.value as Layer)} className="w-full rounded-sm border border-input bg-background px-2 py-2 text-xs">{LAYERS.map(l=><option key={l}>{l}</option>)}</select></label>
           </div>
           <div className="glass absolute right-10 top-7 hidden w-52 rounded-sm p-3 md:block">
@@ -129,13 +136,13 @@ export function FireMap({ focus, setFocus }: { focus: string | null; setFocus: (
           <div className="glass absolute inset-x-4 bottom-4 rounded-sm px-4 py-4 md:inset-x-10">
             <div className="flex items-center gap-4">
               <span className="font-mono text-[10px] text-muted-foreground">2002</span>
-              <input type="range" aria-label="Observation year" min={2002} max={2026} value={year} onChange={(e) => setYear(+e.target.value)} className="fl-range flex-1" />
+              <input type="range" aria-label="Observation year" min={2002} max={2026} value={year} onChange={(e) => { setYear(+e.target.value); setPeriod("selected"); }} className="fl-range min-w-0 flex-1" />
               <span className="font-mono text-[10px] text-muted-foreground">2026</span>
-              <span className="min-w-[80px] text-right font-display text-base font-bold text-fire">{MONTHS[month]} {year}</span>
+              <span className="min-w-[80px] text-right font-display text-base font-bold text-fire">{MONTHS[month]} {observationYear}</span>
             </div>
             <div className="mt-1 flex justify-between font-mono text-[10px] text-muted-foreground">
               <span>{hotspots.length.toLocaleString()} detections shown</span>
-              <span>{year < 2012 ? "MODIS era" : "MODIS + VIIRS harmonized"}</span>
+              <span>{observationYear < 2012 ? "MODIS era" : "MODIS + VIIRS harmonized"}</span>
             </div>
           </div>
         </div>

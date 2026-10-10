@@ -28,6 +28,8 @@ export function CountUp({ to, duration = 1600, suffix = "", prefix = "", decimal
   const from = useRef(0);
   useEffect(() => {
     if (!inView) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reduced.matches) { setV(to); from.current = to; return; }
     const start = performance.now();
     const f0 = from.current;
     let raf = 0;
@@ -40,9 +42,43 @@ export function CountUp({ to, duration = 1600, suffix = "", prefix = "", decimal
       else from.current = to;
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const settle = () => { if (reduced.matches || document.hidden) { cancelAnimationFrame(raf); setV(to); from.current = to; } };
+    reduced.addEventListener("change", settle);
+    document.addEventListener("visibilitychange", settle);
+    return () => { cancelAnimationFrame(raf); reduced.removeEventListener("change", settle); document.removeEventListener("visibilitychange", settle); };
   }, [to, inView, duration]);
   return <span ref={ref}>{prefix}{v.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}{suffix}</span>;
+}
+
+/** Pause ambient motion outside the viewport and in background tabs. */
+export function MotionController() {
+  useEffect(() => {
+    const sections = Array.from(document.querySelectorAll("section"));
+    const visible = new Set<Element>();
+    const sync = () => sections.forEach(section => { section.dataset.motion = visible.has(section) && !document.hidden ? "active" : "paused"; });
+    const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) visible.add(entry.target); else visible.delete(entry.target); }); sync(); });
+    sections.forEach(section => { section.dataset.motion = "paused"; observer.observe(section); });
+    document.addEventListener("visibilitychange", sync);
+    return () => { observer.disconnect(); document.removeEventListener("visibilitychange", sync); sections.forEach(section => delete section.dataset.motion); };
+  }, []);
+  return null;
+}
+
+export function useMotionActive<T extends Element>() {
+  const ref = useRef<T>(null);
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let visible = false;
+    const sync = () => setActive(visible && !document.hidden && !reduced.matches);
+    const observer = new IntersectionObserver(([entry]) => { visible = entry?.isIntersecting ?? false; sync(); }, { threshold: .15 });
+    observer.observe(el);
+    reduced.addEventListener("change", sync); document.addEventListener("visibilitychange", sync);
+    return () => { observer.disconnect(); reduced.removeEventListener("change", sync); document.removeEventListener("visibilitychange", sync); };
+  }, []);
+  return [ref, active] as const;
 }
 
 export function SectionHead({ index, eyebrow, title, sub }: { index: string; eyebrow: string; title: ReactNode; sub?: ReactNode }) {

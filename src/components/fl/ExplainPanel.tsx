@@ -15,7 +15,7 @@ export function explainReasons(r: Region) {
 export function ExplainPanel({ open, onClose, region }: { open: boolean; onClose: () => void; region: Region }) {
   return (
     <Dialog open={open} onOpenChange={value => { if (!value) onClose(); }}>
-      <DialogContent className="left-auto right-0 top-0 z-[60] h-dvh w-full max-w-lg translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 p-6 pt-12 sm:rounded-none md:p-10 md:pt-14">
+      <DialogContent className="evidence-panel left-auto right-0 top-0 z-[60] h-dvh w-full max-w-lg translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-y-0 border-r-0 p-6 pt-12 sm:rounded-none md:p-10 md:pt-14">
         <div className="eyebrow">Explainable intelligence / Evidence brief</div>
         <DialogTitle className="mt-4 text-3xl font-semibold leading-tight">Why FireLens marked<br /><span className="text-fire">{region.name}</span> as {severity(region.anomaly).toLowerCase()}</DialogTitle>
         <DialogDescription className="sr-only">Anomaly evidence and confidence for {region.name}</DialogDescription>

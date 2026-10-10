@@ -201,4 +201,59 @@ a,button { transition: color .2s,background .2s,border-color .2s,transform .2s; 
 @media(max-width:767px) {
  .earth-opening { min-height:820px; } .hero-question { font-size:60px; } .earth-image { object-position:60% center; opacity:.65; } .earth-shade { background:linear-gradient(90deg,var(--background),color-mix(in oklch,var(--background) 50%,transparent)); } .orbital-track { right:-50%; top:20%; width:110%; } .satellite-flight span { display:none; } .map-workspace { height:680px; min-height:680px; } .hero-metrics { max-width:390px; }
 }
-@media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } .reveal { opacity:1; transform:none; } }
+/* Scientific motion: bounded loops, viewport-paused, static under reduced motion. */
+.orbital-earth { top:100px; right:0; width:58%; height:580px; touch-action:pan-y; cursor:grab; }
+.orbital-earth:active { cursor:grabbing; }
+.orbital-earth canvas { width:100%; height:100%; }
+.hero-copy { pointer-events:none; }
+.hero-copy a { pointer-events:auto; }
+.earth-opening .hero-target { top:51%; left:74%; }
+.loader-satellite { animation:orbit 3s linear infinite; }
+.orbit-loader::after { content:''; position:absolute; inset:21px; border-radius:50%; background:var(--sat); opacity:.2; }
+.hotspot-marker { transition:left 1.25s cubic-bezier(.2,.7,.2,1),top 1.25s cubic-bezier(.2,.7,.2,1),opacity .8s,background-color .8s,width .8s,height .8s; }
+.heat-intensity { animation:heat-breathe 8s ease-in-out infinite alternate, fade-opacity 1.4s ease both; }
+.gauge-arc { transition:stroke-dashoffset 1.6s cubic-bezier(.2,.7,.2,1); }
+.gauge-severe .gauge-arc { animation:gauge-signal 4s ease-in-out infinite; }
+.chart-bar { transform-origin:bottom; }
+.in .chart-bar { animation:bar-rise 1.1s cubic-bezier(.2,.7,.2,1) both; }
+.dna-wave { animation:wave-trace 9s linear infinite; }
+.dna-orbit { transform-box:fill-box; }
+.in .timeline-trace,.in .similarity-fill { animation:bar-rise 1.6s cubic-bezier(.2,.7,.2,1) both; }
+.in .timeline-trace,.in .similarity-fill { animation-name:line-grow; }
+.in .timeline-head { animation:timeline-arrive 1.6s cubic-bezier(.2,.7,.2,1) both; }
+.response-row { transition:background-color .25s,transform .25s; }
+.response-row:hover { transform:translateX(4px); }
+.response-row .priority-track { height:2px; background:var(--secondary); margin-top:6px; }
+.response-row .priority-track span { display:block; height:100%; background:var(--fire); transform-origin:left; }
+.in .priority-track span { animation:line-grow 1.2s ease both; }
+.observation-surface { transition:border-color .35s; }
+.observation-surface:hover { border-color:color-mix(in oklch,var(--sat) 45%,transparent); }
+.sensor-cell { animation:sensor-acquire 1.2s ease both; }
+.in .sensor-point { animation:point-acquire 1.4s ease both; }
+.evidence-panel[data-state=open] { animation:panel-enter .45s cubic-bezier(.2,.7,.2,1) both; }
+.evidence-panel[data-state=closed] { animation:panel-exit .3s ease both; }
+.heroes-radar { width:min(70%,620px); aspect-ratio:1; border-radius:50%; border:1px solid color-mix(in oklch,var(--sat) 30%,transparent); background:repeating-radial-gradient(circle,transparent 0,transparent 24%,var(--grid) 24.2%,transparent 24.5%); }
+.radar-sweep { border-radius:50%; background:conic-gradient(from 0deg,transparent 0deg,transparent 300deg,color-mix(in oklch,var(--sat) 18%,transparent) 359deg,transparent 360deg); animation:radar 12s linear infinite; }
+.radar-contact { top:22%; right:27%; width:7px; height:7px; border-radius:50%; background:var(--fire); animation:radar-contact 12s linear infinite; }
+section[data-motion=paused] *,section[data-motion=paused] *::before,section[data-motion=paused] *::after { animation-play-state:paused !important; }
+@keyframes heat-breathe { from { opacity:.5; } to { opacity:.9; } }
+@keyframes fade-opacity { from { opacity:0; } }
+@keyframes gauge-signal { 0%,100% { opacity:1; } 50% { opacity:.7; } }
+@keyframes bar-rise { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+@keyframes line-grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@keyframes timeline-arrive { from { right:100%; opacity:0; } to { right:0; opacity:1; } }
+@keyframes wave-trace { to { stroke-dashoffset:-100; } }
+@keyframes sensor-acquire { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
+@keyframes point-acquire { from { opacity:0; scale:.2; } to { opacity:1; scale:1; } }
+@keyframes panel-enter { from { transform:translateX(100%); opacity:.7; } to { transform:translateX(0); opacity:1; } }
+@keyframes panel-exit { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:.7; } }
+@keyframes radar-contact { 0%,30%,100% { opacity:.2; } 40%,55% { opacity:1; } }
+@media(max-width:767px) { .orbital-earth { top:100px; right:-17%; width:85%; height:430px; opacity:.65; } .map-toolbar { max-width:calc(100% - 32px); } }
+@media(prefers-reduced-motion:reduce) {
+ html { scroll-behavior:auto; }
+ *,*::before,*::after { animation:none !important; transition-duration:.01ms !important; }
+ .reveal { opacity:1; transform:none; }
+ .draw path.d,.draw polyline.d { stroke-dashoffset:0; }
+ .anim-pulse-hot,.hotspot-ring,.radar-sweep,.dna-wave,.anim-ember { display:none; }
+ .chart-bar,.timeline-trace,.similarity-fill { transform:none; }
+}

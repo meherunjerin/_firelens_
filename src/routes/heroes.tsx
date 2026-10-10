@@ -15,6 +15,7 @@ export const Route = createFileRoute("/heroes")({
     <div><SiteNav />
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <img src={forest} alt="Illustrated rainforest" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+        <div className="heroes-radar pointer-events-none absolute" aria-hidden="true"><span className="radar-sweep absolute inset-0" /><span className="radar-contact absolute" /></div>
         <div className="relative px-6 text-center">
           <h1 className="text-5xl font-semibold">Hotspot <span className="text-fire-gradient">Heroes</span></h1>
           <p className="mt-4 text-muted-foreground">Learn NASA fire science. Save the forest. Missions coming soon.</p>

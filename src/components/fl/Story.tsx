@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Reveal, SectionHead, useInView } from "./ui";
+import { Reveal, SectionHead, useMotionActive } from "./ui";
 import observation from "@/assets/amazon-observation.jpg";
 import { rng } from "@/lib/firedata";
 
@@ -40,14 +40,15 @@ export function Story() {
 }
 
 function Merge() {
-  const [ref, inView] = useInView<HTMLDivElement>(0.3);
-  const [merged, setMerged] = useState(false);
+  const [ref, active] = useMotionActive<HTMLDivElement>();
+  const [merged, setMerged] = useState(true);
   useEffect(() => {
-    if (!inView) return;
-    const id = setInterval(() => setMerged((m) => !m), 3200);
-    const t = setTimeout(() => setMerged(true), 600);
+    if (!active) { setMerged(true); return; }
+    setMerged(false);
+    const id = setInterval(() => setMerged((m) => !m), 5600);
+    const t = setTimeout(() => setMerged(true), 1800);
     return () => { clearInterval(id); clearTimeout(t); };
-  }, [inView]);
+  }, [active]);
   const r = rng(7);
   const pts = Array.from({ length: 60 }, (_, i) => ({ x: 20 + r() * 60, y: 15 + r() * 70, m: i % 2 === 0 }));
   return (
@@ -60,9 +61,8 @@ function Merge() {
       {pts.map((p, i) => {
         const off = merged ? 0 : p.m ? -22 : 22;
         return (
-          <span key={i} className={`absolute rounded-full transition-all duration-[1400ms] ease-[cubic-bezier(.2,.7,.2,1)] ${merged ? "bg-fire glow-fire" : p.m ? "bg-sat/70" : "bg-ember"}`}
-            style={{ left: `${p.x + off * (merged ? 0 : 1) * 0.6}%`, top: `${p.y}%`,
-              width: merged ? 7 : p.m ? 14 : 5, height: merged ? 7 : p.m ? 14 : 5, opacity: p.m && !merged ? 0.55 : 1,
+          <span key={i} className={`absolute h-[7px] w-[7px] rounded-full transition-[transform,opacity,background-color] duration-[1400ms] ease-[cubic-bezier(.2,.7,.2,1)] ${merged ? "bg-fire" : p.m ? "bg-sat/70" : "bg-ember"}`}
+            style={{ left: `${p.x}%`, top: `${p.y}%`, transform: `translateX(${off * 3}px) scale(${merged ? 1 : p.m ? 2 : .72})`, opacity: p.m && !merged ? 0.55 : 1,
               transitionDelay: `${(i % 12) * 30}ms` }} />
         );
       })}
