@@ -13,7 +13,7 @@ export function DNAWheel({ region, size = 420 }: { region: Region; size?: number
   const path = (vals: number[], close = true) => vals.map((v, i) => `${i ? "L" : "M"}${pt(i, v).join(",")}`).join(" ") + (close ? "Z" : "");
   const hi = region.monthly.map((v) => v * 1.25), lo = region.monthly.map((v) => v * 0.7);
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="dna-wheel w-full" role="img" aria-label={`Seasonal fire fingerprint for ${region.name}: historical mean and 2026 activity`}>
+    <svg viewBox={`0 0 ${size} ${size}`} className="dna-wheel draw w-full" role="img" aria-label={`Seasonal fire fingerprint for ${region.name}: historical mean and 2026 activity`}>
       <defs>
         <radialGradient id="dnaG"><stop offset="0%" stopColor="var(--lava)" stopOpacity="0.5" /><stop offset="100%" stopColor="var(--fire)" stopOpacity="0" /></radialGradient>
       </defs>
@@ -28,9 +28,9 @@ export function DNAWheel({ region, size = 420 }: { region: Region; size?: number
       })}
       <path d={path(hi)} fill="var(--sat)" fillOpacity={0.1} stroke="var(--sat)" strokeOpacity={0.4} strokeDasharray="3 3" />
       <path d={path(lo)} fill="var(--background)" stroke="var(--sat)" strokeOpacity={0.4} strokeDasharray="3 3" />
-      <path d={path(region.monthly)} fill="none" stroke="var(--sat)" strokeWidth={1.5} />
-      <path key={region.id} d={path(region.currentMonthly, false)} fill="url(#dnaG)" stroke="var(--fire)" strokeWidth={2.5}
-        style={{ filter: "drop-shadow(0 0 6px var(--fire))", strokeDasharray: 3000, strokeDashoffset: 3000, animation: "dash 2.2s ease forwards" }} />
+      <path className="d" d={path(region.monthly)} fill="none" stroke="var(--sat)" strokeWidth={1.5} />
+      <path className="d" key={region.id} d={path(region.currentMonthly, false)} fill="url(#dnaG)" stroke="var(--fire)" strokeWidth={2.5} />
+      <path className="dna-wave" d={path(region.currentMonthly, false)} fill="none" stroke="var(--ember)" strokeWidth={3} pathLength={100} strokeDasharray="4 96" />
       {region.currentMonthly.map((v,i)=>{const [x,y]=pt(i,v);return <circle key={i} cx={x} cy={y} r={3} fill="var(--fire)" stroke="var(--background)" strokeWidth={1.5} />;})}
       <circle cx={c} cy={c} r={inner - 6} fill="var(--card)" stroke="var(--border)" />
       <text x={c} y={c - 6} textAnchor="middle" fontSize={11} fill="var(--muted-foreground)" fontFamily="JetBrains Mono">FireDNA</text>
@@ -68,6 +68,10 @@ export function FireDNA({ region, setRegion }: { region: Region; setRegion: (id:
               <span className="flex items-center gap-2"><span className="h-0.5 w-6 bg-fire" />2026</span>
             </div>
           </div>
+        </div>
+        <div className="mt-16 grid gap-10 border-t border-border pt-10 md:grid-cols-2">
+          <Reveal key={`shift-${region.id}`}><div className="eyebrow">Fire Shift / Long-term activity</div><div className="mt-4 flex items-baseline gap-3"><span className="font-display text-3xl text-fire"><CountUp to={region.growth} prefix={region.growth > 0 ? "+" : ""} suffix="%" /></span><span className="font-mono text-[10px] text-muted-foreground">2002 → 2026 · Demo trend</span></div><div className="shift-timeline relative mt-6 h-px bg-border"><span className="timeline-trace absolute inset-0 origin-left bg-sat" /><span className="timeline-head absolute -top-1 right-0 h-2 w-2 rounded-full bg-fire" /></div></Reveal>
+          <Reveal key={`twin-${region.id}`} delay={150}><div className="eyebrow">Fire Twin / Historical analogue</div><div className="mt-4 flex items-baseline justify-between gap-3"><span className="font-display text-3xl">{region.twinYear}</span><span className="font-display text-2xl text-sat"><CountUp to={region.twinSim} suffix="%" /> <span className="font-mono text-[10px] text-muted-foreground">similarity</span></span></div><div className="mt-6 h-1 bg-secondary"><div className="similarity-fill h-full origin-left bg-sat" style={{width:`${region.twinSim}%`}} /></div></Reveal>
         </div>
       </div>
     </section>

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Activity } from "lucide-react";
 import { useState } from "react";
 import { severity, type Region } from "@/lib/firedata";
-import { CountUp, Reveal, SectionHead, Stat } from "./ui";
+import { CountUp, Reveal, SectionHead, Stat, useInView } from "./ui";
 import { RegionPicker } from "./RegionPicker";
 import { ExplainPanel } from "./ExplainPanel";
 
@@ -10,14 +10,15 @@ const LEVELS = ["Normal", "Elevated", "High", "Severe", "Extreme"];
 
 export function Gauge({ score }: { score: number }) {
   const R = 130, C = Math.PI * R;
+  const [ref, inView] = useInView<SVGSVGElement>(.2);
   return (
-    <svg viewBox="0 0 300 180" className="w-full" role="img" aria-label={`Anomaly score ${score} out of 100`}>
+    <svg ref={ref} viewBox="0 0 300 180" className={`w-full ${score >= 75 ? "gauge-severe" : ""}`} role="img" aria-label={`Anomaly score ${score} out of 100`}>
       <defs>
         <linearGradient id="gG" x1="0" x2="1"><stop offset="0" stopColor="var(--ok)" /><stop offset="0.45" stopColor="var(--amber)" /><stop offset="0.75" stopColor="var(--fire)" /><stop offset="1" stopColor="var(--lava)" /></linearGradient>
       </defs>
       <path d="M20 160 A130 130 0 0 1 280 160" fill="none" stroke="var(--secondary)" strokeWidth={18} strokeLinecap="round" />
-      <path d="M20 160 A130 130 0 0 1 280 160" fill="none" stroke="url(#gG)" strokeWidth={18} strokeLinecap="round"
-        strokeDasharray={C} strokeDashoffset={C * (1 - score / 100)} style={{ transition: "stroke-dashoffset 1.6s cubic-bezier(.2,.7,.2,1)", filter: "drop-shadow(0 0 8px var(--fire))" }} />
+      <path className="gauge-arc" d="M20 160 A130 130 0 0 1 280 160" fill="none" stroke="url(#gG)" strokeWidth={18} strokeLinecap="round"
+        strokeDasharray={C} strokeDashoffset={inView ? C * (1 - score / 100) : C} />
     </svg>
   );
 }
@@ -60,7 +61,7 @@ export function Anomaly({ region, setRegion }: { region: Region; setRegion: (id:
             <Stat label="Percentile" value={`${region.percentile}th`} />
             <Stat label="Confidence" value={`${region.confidence}%`} tone="sat" />
           </div>
-          <div className="mt-10 border-y border-border py-6">
+          <Reveal key={`history-${region.id}`} className="mt-10 border-y border-border py-6">
             <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               <span>Peak-month detections · 2002 → 2025</span><span className="text-fire">■ 2026</span>
             </div>
@@ -70,11 +71,11 @@ export function Anomaly({ region, setRegion }: { region: Region; setRegion: (id:
                 <span className="absolute -top-4 right-0 font-mono text-[10px] text-sat">normal ceiling</span>
               </div>
               {hist.map((h, i) => (
-                <div key={`${region.id}-${i}`} className="flex-1 rounded-t-sm bg-sat-dim/50 hover:bg-sat/70 transition-all duration-700" style={{ height: `${(h / max) * 100}%`, transitionDelay: `${i * 20}ms` }} />
+                <div key={`${region.id}-${i}`} className="chart-bar flex-1 rounded-t-sm bg-sat-dim/50 hover:bg-sat/70 transition-colors" style={{ height: `${(h / max) * 100}%`, animationDelay: `${i * 25}ms` }} />
               ))}
-              <div className="relative flex-[1.6] rounded-t-sm bg-fire-gradient glow-fire transition-all duration-1000" style={{ height: `${(region.current / max) * 100}%` }}><span className="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] text-fire">{region.current.toLocaleString()}</span></div>
+              <div className="chart-bar relative flex-[1.6] rounded-t-sm bg-fire-gradient" style={{ height: `${(region.current / max) * 100}%`, animationDelay:"650ms" }}><span className="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] text-fire">{region.current.toLocaleString()}</span></div>
             </div><div className="chart-caption mt-4"><span>2002</span><span>24-year historical record</span><span className="text-fire">2026</span></div>
-          </div>
+          </Reveal>
         </div>
       </div>
       </div><ExplainPanel open={open} onClose={() => setOpen(false)} region={region} />
