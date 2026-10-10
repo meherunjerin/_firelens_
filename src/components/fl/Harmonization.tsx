@@ -18,15 +18,15 @@ export function Harmonization() {
             <div className="tech-grid absolute inset-0" />
             <div className="absolute inset-0">
               {fires.map((f, i) => (
-                <span key={i} className="absolute bg-sat/30 outline outline-1 outline-sat/60"
-                  style={{ left: `${Math.floor(f.x / 6) * 6}%`, top: `${Math.floor(f.y / 9.6) * 9.6}%`, width: "6%", height: "9.6%" }} />
+                <span key={i} className="sensor-cell absolute bg-sat/30 outline outline-1 outline-sat/60"
+                  style={{ left: `${Math.floor(f.x / 6) * 6}%`, top: `${Math.floor(f.y / 9.6) * 9.6}%`, width: "6%", height: "9.6%", animationDelay:`${(i%8)*80}ms` }} />
               ))}
             </div>
             {/* VIIRS harmonized overlay clipped */}
             <div className="absolute inset-0 bg-card" style={{ clipPath: `inset(0 0 0 ${split}%)` }}>
               <img src={observation} alt="" width={1536} height={1024} loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-65" /><div className="tech-grid absolute inset-0" />
               {fires.map((f, i) => (
-                <span key={i} className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fire glow-fire" style={{ left: `${f.x}%`, top: `${f.y}%` }} />
+                <span key={i} className="sensor-point absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fire" style={{ left: `${f.x}%`, top: `${f.y}%`, animationDelay:`${(i%8)*100+400}ms` }} />
               ))}
             </div>
             <div className="absolute inset-y-0 w-px bg-ember" style={{ left: `${split}%` }}>
