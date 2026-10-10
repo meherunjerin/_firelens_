@@ -1,16 +1,18 @@
 import earth from "@/assets/earth-finals.jpg";
-import { ArrowDown, ArrowUpRight, Satellite, Crosshair } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CountUp } from "./ui";
+import { CountUp, Embers } from "./ui";
+import { OrbitalEarth } from "./OrbitalEarth";
 
 export function Hero() {
   return (
     <section className="earth-opening relative isolate overflow-hidden">
       <img src={earth} alt="Orbital view of Earth with fire clusters across the Amazon basin" width={1920} height={1080} fetchPriority="high" className="earth-image absolute inset-0 h-full w-full object-cover" />
       <div className="earth-shade absolute inset-0" />
-      <div className="orbital-track pointer-events-none absolute"><span className="satellite-flight"><Satellite size={26} /><span>TERRA · MODIS</span></span></div>
+      <OrbitalEarth />
+      <Embers n={12} />
       <div className="hero-target pointer-events-none absolute hidden md:block"><span className="hotspot-ring" /><Crosshair size={32} /><div className="mt-3 font-mono text-[10px] text-sat">03.50° S / 63.00° W</div><div className="mt-1 font-mono text-[10px] text-foreground">AMAZONAS · +184% VS NORMAL</div></div>
-      <div className="relative mx-auto w-full max-w-[1440px] px-6 pt-32 md:px-12 md:pt-40">
+      <div className="hero-copy relative mx-auto w-full max-w-[1440px] px-6 pt-32 md:px-12 md:pt-40">
         <div className="mb-8 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-sat"><span className="h-1.5 w-1.5 rounded-full bg-sat animate-pulse" />Earth observation / Decision intelligence</div>
         <div className="mb-4 font-display text-sm font-semibold text-foreground/70">FireLens <span className="mx-2 text-muted-foreground">/</span> NASA Space Apps 2026</div>
         <h1 className="hero-question font-display font-bold">Is this fire<br /><span className="text-fire">normal?</span></h1>
