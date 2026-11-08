@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BangladeshRouteImport } from './routes/bangladesh'
 import { Route as DataRouteImport } from './routes/data'
 import { Route as HeroesRouteImport } from './routes/heroes'
 import { Route as FirescopeRegionIdRouteImport } from './routes/firescope.$regionId'
@@ -17,6 +18,11 @@ import { Route as FirescopeRegionIdRouteImport } from './routes/firescope.$regio
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BangladeshRoute = BangladeshRouteImport.update({
+  id: '/bangladesh',
+  path: '/bangladesh',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DataRoute = DataRouteImport.update({
@@ -37,12 +43,14 @@ const FirescopeRegionIdRoute = FirescopeRegionIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bangladesh': typeof BangladeshRoute
   '/data': typeof DataRoute
   '/heroes': typeof HeroesRoute
   '/firescope/$regionId': typeof FirescopeRegionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bangladesh': typeof BangladeshRoute
   '/data': typeof DataRoute
   '/heroes': typeof HeroesRoute
   '/firescope/$regionId': typeof FirescopeRegionIdRoute
@@ -50,20 +58,28 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bangladesh': typeof BangladeshRoute
   '/data': typeof DataRoute
   '/heroes': typeof HeroesRoute
   '/firescope/$regionId': typeof FirescopeRegionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/data' | '/heroes' | '/firescope/$regionId'
+  fullPaths: '/' | '/bangladesh' | '/data' | '/heroes' | '/firescope/$regionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/data' | '/heroes' | '/firescope/$regionId'
-  id: '__root__' | '/' | '/data' | '/heroes' | '/firescope/$regionId'
+  to: '/' | '/bangladesh' | '/data' | '/heroes' | '/firescope/$regionId'
+  id:
+    | '__root__'
+    | '/'
+    | '/bangladesh'
+    | '/data'
+    | '/heroes'
+    | '/firescope/$regionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BangladeshRoute: typeof BangladeshRoute
   DataRoute: typeof DataRoute
   HeroesRoute: typeof HeroesRoute
   FirescopeRegionIdRoute: typeof FirescopeRegionIdRoute
@@ -76,6 +92,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bangladesh': {
+      id: '/bangladesh'
+      path: '/bangladesh'
+      fullPath: '/bangladesh'
+      preLoaderRoute: typeof BangladeshRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/data': {
@@ -104,6 +127,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BangladeshRoute: BangladeshRoute,
   DataRoute: DataRoute,
   HeroesRoute: HeroesRoute,
   FirescopeRegionIdRoute: FirescopeRegionIdRoute,
