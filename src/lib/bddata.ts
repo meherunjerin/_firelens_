@@ -1,6 +1,7 @@
 // Real FireLens data (NASA FIRMS MODIS + VIIRS, harmonized in Colab).
 // Files are read from /public/data/: monthly_cells.json (required), validation.json (optional).
 export type Cell = { cell_lat: number; cell_lon: number; month: string; count_harmonized: number; source_flag: "observed" | "calibrated" };
+export type Inside = (c: Cell) => boolean;
 export type AOI = { south: number; north: number; west: number; east: number };
 export type Band = "Normal" | "Elevated" | "Extreme" | "Low activity" | "No baseline";
 export type Row = {
@@ -48,12 +49,14 @@ export function observedFrom(cells: Cell[]) { // first month with directly obser
 }
 
 /** Sum cells inside the AOI per month, then score each month against the same calendar month in earlier years. */
-export function analyse(cells: Cell[], months: string[], a: AOI) {
+export const cellId = (c: { cell_lat: number; cell_lon: number }) => `${c.cell_lat},${c.cell_lon}`;
+export const boxInside = (a: AOI): Inside => (c) => { const la = c.cell_lat + 0.125, lo = c.cell_lon + 0.125; return la >= a.south && la <= a.north && lo >= a.west && lo <= a.east; };
+
+export function analyse(cells: Cell[], months: string[], inside: Inside) {
   const sums = new Map<string, number>(), inCells = new Set<string>(), allCells = new Set<string>();
   for (const c of cells) {
-    const id = `${c.cell_lat},${c.cell_lon}`; allCells.add(id);
-    const la = c.cell_lat + 0.125, lo = c.cell_lon + 0.125;
-    if (la < a.south || la > a.north || lo < a.west || lo > a.east) continue;
+    const id = cellId(c); allCells.add(id);
+    if (!inside(c)) continue;
     inCells.add(id); sums.set(c.month, (sums.get(c.month) ?? 0) + c.count_harmonized);
   }
   const cut = observedFrom(cells);
@@ -83,9 +86,9 @@ export function toCSV(rows: Row[]) {
     r.median.toFixed(1), r.xMedian.toFixed(2), r.score.toFixed(2), r.band, r.confidence].join(","))].join("\n");
 }
 
-export function cellTotals(cells: Cell[], y0: number, y1: number) {
+export function cellTotals(cells: Cell[], y0: number, y1: number, monthKey?: string) {
   const t = new Map<string, { lat: number; lon: number; n: number }>();
-  for (const c of cells) { const y = +c.month.slice(0, 4); if (y < y0 || y > y1) continue;
+  for (const c of cells) { const y = +c.month.slice(0, 4); if (y < y0 || y > y1) continue; if (monthKey && c.month !== monthKey) continue;
     const id = `${c.cell_lat},${c.cell_lon}`, e = t.get(id) ?? { lat: c.cell_lat, lon: c.cell_lon, n: 0 }; e.n += c.count_harmonized; t.set(id, e); }
   return [...t.values()];
 }

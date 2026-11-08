@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { analyse, monthKeys, PRESETS, toCSV, type Cell } from "@/lib/bddata";
+import { analyse, boxInside, monthKeys, PRESETS, toCSV, type Cell } from "@/lib/bddata";
 
 const cells = JSON.parse(readFileSync("src/test/fixture-cells.json", "utf8")) as Cell[];
 const months = monthKeys(cells);
-const { rows } = analyse(cells, months, PRESETS[0]!.aoi);
+const { rows } = analyse(cells, months, boxInside(PRESETS[0]!.aoi));
 const at = (k: string) => rows.find((r) => r.key === k)!;
 
 describe("bddata", () => {
