@@ -18,14 +18,14 @@ export function Hero() {
         <h1 className="hero-question font-display font-bold">Is this fire<br /><span className="text-fire">normal?</span></h1>
         <p className="mt-7 max-w-[430px] text-base leading-relaxed text-foreground/70">We don’t just show you a fire map. We tell you whether what you’re seeing is normal — and if not, <span className="text-foreground">why, and where to act first.</span></p>
         <div className="mt-8 flex flex-wrap gap-4">
-          <Button asChild size="lg" className="h-12 rounded-sm px-6 text-xs"><a href="#map">Explore the fire map <ArrowUpRight /></a></Button>
+          <Button asChild size="lg" className="h-12 rounded-sm px-6 text-xs"><a href="/bangladesh">Try FireLens · Bangladesh real data <ArrowUpRight /></a></Button><Button asChild variant="outline" size="lg" className="h-12 rounded-sm px-6 text-xs"><a href="#map">Explore the demo map</a></Button>
           <Button asChild variant="ghost" size="lg" className="h-12 rounded-sm text-xs text-foreground"><a href="#mission">How it works <ArrowDown /></a></Button>
         </div>
         <div className="hero-metrics mt-14 grid max-w-[650px] grid-cols-2 gap-6 border-t border-foreground/15 pt-6 md:mt-16 md:grid-cols-4">
           {[{v:24,s:" yrs",l:"Harmonized record"},{v:2,s:" sensors",l:"MODIS · VIIRS"},{v:184,s:"%",l:"Amazonas vs normal",p:"+"},{v:94,s:"/100",l:"Top priority score"}].map(x => <div key={x.l}><div className="font-display text-2xl font-semibold"><CountUp to={x.v} suffix={x.s} prefix={x.p ?? ""} /></div><div className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">{x.l}</div></div>)}
         </div>
       </div>
-      <div className="relative mx-auto mt-10 flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 pb-7 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground md:px-12"><a href="#mission" className="flex items-center gap-3 hover:text-sat"><ArrowDown size={14} />From orbit to action</a><span>MODIS + VIIRS / 2002 — 2026 / Demo values</span></div>
+      <div className="relative mx-auto mt-10 flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 pb-7 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground md:px-12"><a href="#mission" className="flex items-center gap-3 hover:text-sat"><ArrowDown size={14} />From orbit to action</a><span>MODIS + VIIRS / 2002 — 2026 / Demo values on this page · Independent project, not an official NASA product</span></div>
     </section>
   );
 }

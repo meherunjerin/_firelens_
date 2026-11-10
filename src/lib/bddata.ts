@@ -1,6 +1,7 @@
 // Real FireLens data (NASA FIRMS MODIS + VIIRS, harmonized in Colab).
 // Files are read from /public/data/: monthly_cells.json (required), validation.json (optional).
-export type Cell = { cell_lat: number; cell_lon: number; month: string; count_harmonized: number; source_flag: "observed" | "calibrated" };
+export type Cell = { cell_lat: number; cell_lon: number; month: string; count_harmonized: number; source_flag: "observed" | "calibrated"; modis?: number | undefined; viirs?: number | undefined };
+export type Inside = (c: Cell) => boolean;
 export type AOI = { south: number; north: number; west: number; east: number };
 export type Band = "Normal" | "Elevated" | "Extreme" | "Low activity" | "No baseline";
 export type Row = {
@@ -48,12 +49,14 @@ export function observedFrom(cells: Cell[]) { // first month with directly obser
 }
 
 /** Sum cells inside the AOI per month, then score each month against the same calendar month in earlier years. */
-export function analyse(cells: Cell[], months: string[], a: AOI) {
+export const cellId = (c: { cell_lat: number; cell_lon: number }) => `${c.cell_lat},${c.cell_lon}`;
+export const boxInside = (a: AOI): Inside => (c) => { const la = c.cell_lat + 0.125, lo = c.cell_lon + 0.125; return la >= a.south && la <= a.north && lo >= a.west && lo <= a.east; };
+
+export function analyse(cells: Cell[], months: string[], inside: Inside) {
   const sums = new Map<string, number>(), inCells = new Set<string>(), allCells = new Set<string>();
   for (const c of cells) {
-    const id = `${c.cell_lat},${c.cell_lon}`; allCells.add(id);
-    const la = c.cell_lat + 0.125, lo = c.cell_lon + 0.125;
-    if (la < a.south || la > a.north || lo < a.west || lo > a.east) continue;
+    const id = cellId(c); allCells.add(id);
+    if (!inside(c)) continue;
     inCells.add(id); sums.set(c.month, (sums.get(c.month) ?? 0) + c.count_harmonized);
   }
   const cut = observedFrom(cells);
@@ -77,15 +80,31 @@ export function analyse(cells: Cell[], months: string[], a: AOI) {
   return { rows, nCells: inCells.size, cut, minActive };
 }
 
-export function toCSV(rows: Row[]) {
+export function toCSV(rows: Row[], note: string[] = []) {
   const head = "month,count_harmonized,source,median_same_month,x_median,score,band,confidence";
-  return [head, ...rows.map((r) => [r.key, r.count.toFixed(1), r.calibrated ? "calibrated_from_MODIS" : "observed_VIIRS",
+  return [...note, head, ...rows.map((r) => [r.key, r.count.toFixed(1), r.calibrated ? "calibrated_from_MODIS" : "observed_VIIRS",
     r.median.toFixed(1), r.xMedian.toFixed(2), r.score.toFixed(2), r.band, r.confidence].join(","))].join("\n");
 }
 
-export function cellTotals(cells: Cell[], y0: number, y1: number) {
+export const downgrade = (c: Row["confidence"]): Row["confidence"] => (c === "High" ? "Medium" : "Low");
+
+/** Pearson correlation of monthly MODIS vs VIIRS counts inside the area, on the period where both exist (needs raw columns). */
+export function sensorAgreement(cells: Cell[], inside: Inside, fromKey: string): number | null {
+  const m = new Map<string, [number, number]>();
+  for (const c of cells) {
+    if (c.modis === undefined || c.viirs === undefined || c.month < fromKey || !inside(c)) continue;
+    const e = m.get(c.month) ?? [0, 0]; e[0] += c.modis; e[1] += c.viirs; m.set(c.month, e);
+  }
+  if (m.size < 24) return null;
+  const a = [...m.values()], mx = a.reduce((s, v) => s + v[0], 0) / a.length, my = a.reduce((s, v) => s + v[1], 0) / a.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (const [x, y] of a) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
+  return sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : null;
+}
+
+export function cellTotals(cells: Cell[], y0: number, y1: number, monthKey?: string) {
   const t = new Map<string, { lat: number; lon: number; n: number }>();
-  for (const c of cells) { const y = +c.month.slice(0, 4); if (y < y0 || y > y1) continue;
+  for (const c of cells) { const y = +c.month.slice(0, 4); if (y < y0 || y > y1) continue; if (monthKey && c.month !== monthKey) continue;
     const id = `${c.cell_lat},${c.cell_lon}`, e = t.get(id) ?? { lat: c.cell_lat, lon: c.cell_lon, n: 0 }; e.n += c.count_harmonized; t.set(id, e); }
   return [...t.values()];
 }
@@ -95,3 +114,39 @@ export const viridis = (t: number) => { // colorblind-safe ramp, t in 0..1
   return `rgb(${a.map((v, k) => Math.round(v + ((b[k] ?? v) - v) * f)).join(",")})`;
 };
 export { median as medianOf };
+
+// ---- Recurring and emerging zones (per 0.25° cell, in the nationwide fire season) ----
+export const ZONE = { ACTIVE_MIN: 3, RECUR_SHARE: 0.8, MIN_YEARS_RECUR: 5, MIN_YEARS_EMERGE: 8, RECENT: 3, EMERGE_RATIO: 2, EMERGE_MIN: 10 };
+export type ZoneKind = "recurring" | "emerging" | "both" | "none" | "unknown";
+export type Zone = { id: string; lat: number; lon: number; kind: ZoneKind; active: number; years: number; ratio: number; recent: number };
+
+export function analyseZones(cells: Cell[], months: string[], y0: number, y1: number) {
+  const tot: number[] = new Array(14).fill(0);
+  for (const c of cells) { const y = +c.month.slice(0, 4); if (y >= y0 && y <= y1) { const m = +c.month.slice(5); tot[m] = (tot[m] ?? 0) + c.count_harmonized; } }
+  let start = 1, best = -1; // busiest 3 consecutive calendar months nationwide
+  for (let s = 1; s <= 10; s++) { const v = (tot[s] ?? 0) + (tot[s + 1] ?? 0) + (tot[s + 2] ?? 0); if (v > best) { best = v; start = s; } }
+  const season = [start, start + 1, start + 2], have = new Set(months);
+  const yrs = [...new Set(months.map((k) => +k.slice(0, 4)))].filter((y) => y >= y0 && y <= y1 && season.every((m) => have.has(`${y}-${String(m).padStart(2, "0")}`)));
+  const sums = new Map<string, Map<number, number>>(), pos = new Map<string, { lat: number; lon: number }>();
+  for (const c of cells) {
+    const id = cellId(c); if (!pos.has(id)) pos.set(id, { lat: c.cell_lat, lon: c.cell_lon });
+    const y = +c.month.slice(0, 4), m = +c.month.slice(5); if (y < y0 || y > y1 || !season.includes(m)) continue;
+    let e = sums.get(id); if (!e) sums.set(id, (e = new Map()));
+    e.set(y, (e.get(y) ?? 0) + c.count_harmonized);
+  }
+  const zones: Zone[] = [];
+  for (const [id, p] of pos) {
+    const e = sums.get(id), v = yrs.map((y) => e?.get(y) ?? 0);
+    const active = v.filter((x) => x >= ZONE.ACTIVE_MIN).length;
+    const recurring = v.length >= ZONE.MIN_YEARS_RECUR && active / v.length >= ZONE.RECUR_SHARE;
+    let emerging = false, ratio = 0, recent = 0;
+    if (v.length >= ZONE.MIN_YEARS_EMERGE) {
+      const rec = v.slice(-ZONE.RECENT), base = v.slice(0, -ZONE.RECENT);
+      recent = rec.reduce((a, b) => a + b, 0) / rec.length; ratio = recent / Math.max(median(base), ZONE.ACTIVE_MIN);
+      emerging = ratio >= ZONE.EMERGE_RATIO && recent >= ZONE.EMERGE_MIN;
+    }
+    const kind: ZoneKind = v.length < ZONE.MIN_YEARS_RECUR ? "unknown" : recurring && emerging ? "both" : recurring ? "recurring" : emerging ? "emerging" : "none";
+    zones.push({ id, ...p, kind, active, years: v.length, ratio, recent });
+  }
+  return { season, years: yrs.length, zones };
+}
