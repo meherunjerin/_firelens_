@@ -1,6 +1,7 @@
 // Real FireLens data (NASA FIRMS MODIS + VIIRS, harmonized in Colab).
 // Files are read from /public/data/: monthly_cells.json (required), validation.json (optional).
-export type Cell = { cell_lat: number; cell_lon: number; month: string; count_harmonized: number; source_flag: "observed" | "calibrated"; modis?: number | undefined; viirs?: number | undefined };
+export type Cell = { cell_lat: number; cell_lon: number; month: string; count_harmonized: number; source_flag: "observed" | "calibrated"; modis?: number | undefined; viirs?: number | undefined; frp?: number | undefined };
+export type StaticCell = { cell_lat: number; cell_lon: number; month: string; static: number };
 export type Inside = (c: Cell) => boolean;
 export type AOI = { south: number; north: number; west: number; east: number };
 export type Band = "Normal" | "Elevated" | "Extreme" | "Low activity" | "No baseline";
@@ -23,14 +24,16 @@ export const PRESETS: { id: string; name: string; aoi: AOI }[] = [
 const MIN_HISTORY = 5, FLOOR = 0.35, MIN_ACTIVE = 50, ELEVATED = 1.5, EXTREME = 3;
 export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-export async function loadBD(): Promise<{ cells: Cell[]; validation: Validation }> {
+export async function loadBD(): Promise<{ cells: Cell[]; validation: Validation; statics: StaticCell[] | null }> {
   const r = await fetch("/data/monthly_cells.json");
   if (!r.ok) throw new Error(`monthly_cells.json not found (HTTP ${r.status})`);
   const cells = (await r.json()) as Cell[];
   let raw: any = null;
   try { const v = await fetch("/data/validation.json"); if (v.ok) raw = await v.json(); } catch { /* optional */ }
+  let statics: StaticCell[] | null = null; // optional: static heat sources excluded from the fire series
+  try { const s = await fetch("/data/static_cells.json"); if (s.ok) { const j = await s.json(); if (Array.isArray(j)) statics = j as StaticCell[]; } } catch { /* optional */ }
   const old = raw?.r2 != null ? { r2: raw.r2, corr: raw.corr, bias_pct: raw.bias_pct, mae: raw.mae } : null;
-  return { cells, validation: { all: raw?.validation_all ?? old, peak: raw?.validation_peak_feb_apr ?? null,
+  return { cells, statics, validation: { all: raw?.validation_all ?? old, peak: raw?.validation_peak_feb_apr ?? null,
     ratioByMonth: raw?.ratio_by_month ?? null, ratioSingle: raw?.ratio_single ?? raw?.ratio ?? null, cut: raw?.calibration_start ?? null } };
 }
 
@@ -52,7 +55,7 @@ export function observedFrom(cells: Cell[]) { // first month with directly obser
 export const cellId = (c: { cell_lat: number; cell_lon: number }) => `${c.cell_lat},${c.cell_lon}`;
 export const boxInside = (a: AOI): Inside => (c) => { const la = c.cell_lat + 0.125, lo = c.cell_lon + 0.125; return la >= a.south && la <= a.north && lo >= a.west && lo <= a.east; };
 
-export function analyse(cells: Cell[], months: string[], inside: Inside) {
+export function analyse(cells: Cell[], months: string[], inside: Inside, minBase = MIN_ACTIVE) {
   const sums = new Map<string, number>(), inCells = new Set<string>(), allCells = new Set<string>();
   for (const c of cells) {
     const id = cellId(c); allCells.add(id);
@@ -60,7 +63,7 @@ export function analyse(cells: Cell[], months: string[], inside: Inside) {
     inCells.add(id); sums.set(c.month, (sums.get(c.month) ?? 0) + c.count_harmonized);
   }
   const cut = observedFrom(cells);
-  const minActive = Math.max(10, Math.round(MIN_ACTIVE * inCells.size / Math.max(1, allCells.size)));
+  const minActive = Math.max(10, Math.round(minBase * inCells.size / Math.max(1, allCells.size)));
   const counts = months.map((k) => sums.get(k) ?? 0);
   const rows: Row[] = months.map((key, i) => {
     const [year = 0, mon = 1] = key.split("-").map(Number), count = counts[i] ?? 0, calibrated = key < cut;

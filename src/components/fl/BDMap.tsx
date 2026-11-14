@@ -10,8 +10,8 @@ const X = (lon: number) => ((lon - LON0) / (LON1 - LON0)) * W, Y = (lat: number)
 const path = (rings: number[][]) => rings.map((r) => r.reduce((d, v, i) => d + (i % 2 ? `${Y(v).toFixed(1)}` : `${i ? "L" : "M"}${X(v).toFixed(1)},`), "") + "Z").join("");
 
 /** Fire map of Bangladesh: country outline, 8 divisions and 0.25° cells coloured by `value`. */
-export function BDMap({ cells, max, unit, division, cellId, onDivision, onCell, colorOf, legend }: {
-  cells: MapCell[]; max: number; unit: string; division: string | null; cellId: string | null; colorOf?: ((c: MapCell) => string) | undefined; legend?: ReactNode | undefined;
+export function BDMap({ cells, max, unit, division, cellId, onDivision, onCell, colorOf, legend, overlay }: {
+  cells: MapCell[]; max: number; unit: string; division: string | null; cellId: string | null; colorOf?: ((c: MapCell) => string) | undefined; legend?: ReactNode | undefined; overlay?: { id: string; lat: number; lon: number; n: number }[] | undefined;
   onDivision: (name: string | null) => void; onCell: (id: string) => void;
 }) {
   const { t, dn } = useT();
@@ -31,6 +31,8 @@ export function BDMap({ cells, max, unit, division, cellId, onDivision, onCell, 
               onMouseEnter={() => setHover(c)} onMouseLeave={() => setHover(null)} onClick={() => onCell(c.id)} />
           ))}
         </g>
+        {overlay?.map((o) => { const cx = X(o.lon + 0.125), cy = Y(o.lat + 0.125);
+          return <polygon key={`s${o.id}`} points={`${cx},${cy - 7} ${cx + 7},${cy} ${cx},${cy + 7} ${cx - 7},${cy}`} fill="#ef4444" stroke="white" strokeWidth={1.5}><title>{`${o.n} static-source detections (excluded)`}</title></polygon>; })}
         <g className="pointer-events-none" fill="none">
           {divs.map((d) => <path key={d.name} d={d.d} stroke={division === d.name ? "var(--fire)" : "var(--foreground)"} strokeOpacity={division === d.name ? 1 : 0.35} strokeWidth={division === d.name ? 2.2 : 0.8} />)}
           <path d={outline} stroke="var(--foreground)" strokeOpacity={0.7} strokeWidth={1.2} />

@@ -6,7 +6,7 @@ import { SectionHead, Stat } from "@/components/fl/ui";
 import { Button } from "@/components/ui/button";
 import { BDMap, type MapCell } from "@/components/fl/BDMap";
 import { DIVISIONS, divisionAt } from "@/lib/bdgeo";
-import { PRESETS, ZONE, analyse, analyseZones, boxInside, cellId, cellTotals, loadBD, medianOf, monthKeys, observedFrom, downgrade, sensorAgreement, toCSV, viridis, type AOI, type Band, type Cell, type Inside, type Row, type Validation, type ZoneKind } from "@/lib/bddata";
+import { PRESETS, ZONE, analyse, analyseZones, boxInside, cellId, cellTotals, loadBD, medianOf, monthKeys, observedFrom, downgrade, sensorAgreement, toCSV, viridis, type AOI, type Band, type Cell, type Inside, type Row, type StaticCell, type Validation, type ZoneKind } from "@/lib/bddata";
 import { LangCtx, MONTHS, SHORT, useT, type Lang } from "@/lib/bdi18n";
 
 export const Route = createFileRoute("/bangladesh")({
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/bangladesh")({
 
 const bandTone: Record<Band, string> = { Normal: "text-ok", Elevated: "text-fire", Extreme: "text-lava", "Low activity": "text-muted-foreground", "No baseline": "text-muted-foreground" };
 const ZONE_COLOR: Record<ZoneKind, string> = { recurring: "#3b82f6", emerging: "#f97316", both: "#fde047", none: "#475569", unknown: "#1e293b" };
+type Series = "harmonized" | "modis" | "viirs" | "frp";
 const M12 = Array.from({ length: 12 }, (_, i) => i);
 const inputCls = "w-full rounded-sm border border-input bg-background/60 px-2 py-1.5 font-mono text-xs outline-none focus:border-fire";
 
@@ -29,7 +30,7 @@ function Page() {
 
 function Shell({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const { t } = useT();
-  const [data, setData] = useState<{ cells: Cell[]; validation: Validation } | null>(null);
+  const [data, setData] = useState<{ cells: Cell[]; validation: Validation; statics: StaticCell[] | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (new URLSearchParams(window.location.hash.slice(1)).get("l") === "bn") setLang("bn"); }, []);
   useEffect(() => { loadBD().then(setData).catch((e) => setErr(String(e.message ?? e))); }, []);
@@ -40,7 +41,7 @@ function Shell({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
       </div>
       {err && <Missing msg={err} />}
       {!err && !data && <p className="px-6 py-24 text-center font-mono text-xs text-muted-foreground md:px-12">{t("loading")}</p>}
-      {data && <Dashboard cells={data.cells} validation={data.validation} />}
+      {data && <Dashboard cells={data.cells} validation={data.validation} statics={data.statics} />}
     </div><Footer /></div>
   );
 }
@@ -51,13 +52,17 @@ function Missing({ msg }: { msg: string }) {
     <p className="mt-4 text-muted-foreground">{msg}. Copy <code className="text-fire">monthly_cells.json</code> (and optionally <code className="text-fire">validation.json</code> and <code className="text-fire">validation.png</code>) from Colab into <code className="text-fire">public/data/</code>, then reload.</p></section>;
 }
 
-function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation: Validation }) {
+function Dashboard({ cells: rawCells, validation, statics }: { cells: Cell[]; validation: Validation; statics: StaticCell[] | null }) {
   const { t, lang, dn } = useT();
   const mn = MONTHS[lang], sh = SHORT[lang];
   const hp = useMemo(() => new URLSearchParams(window.location.hash.slice(1)), []);
-  const hasRaw = rawCells[0]?.modis !== undefined && rawCells[0]?.viirs !== undefined;
-  const [series, setSeries] = useState<"harmonized" | "modis" | "viirs">(hasRaw && (hp.get("s") === "modis" || hp.get("s") === "viirs") ? (hp.get("s") as "modis" | "viirs") : "harmonized");
-  const cells = useMemo(() => series === "harmonized" ? rawCells : rawCells.map((c) => ({ ...c, count_harmonized: (series === "modis" ? c.modis : c.viirs) ?? 0, source_flag: "observed" as const })), [rawCells, series]);
+  const hasRaw = rawCells.some((c) => c.modis !== undefined) && rawCells.some((c) => c.viirs !== undefined);
+  const hasFrp = rawCells.some((c) => c.frp !== undefined);
+  const sp = hp.get("s");
+  const [series, setSeries] = useState<Series>((sp === "modis" || sp === "viirs") && hasRaw ? sp : sp === "frp" && hasFrp ? "frp" : "harmonized");
+  const frpMin = useMemo(() => { let f = 0, n = 0; for (const c of rawCells) { f += c.frp ?? 0; n += c.count_harmonized; } return n > 0 ? (f / n) * 50 : 50; }, [rawCells]);
+  const minBase = series === "frp" ? frpMin : 50; // "Low activity" threshold: 50 detections, or the same amount of FRP (MW)
+  const cells = useMemo(() => series === "harmonized" ? rawCells : series === "frp" ? rawCells.map((c) => ({ ...c, count_harmonized: c.frp ?? 0 })) : rawCells.map((c) => ({ ...c, count_harmonized: (series === "modis" ? c.modis : c.viirs) ?? 0, source_flag: "observed" as const })), [rawCells, series]);
   const months = useMemo(() => monthKeys(cells), [cells]);
   const years = useMemo(() => [...new Set(months.map((k) => +k.slice(0, 4)))], [months]);
   const [area, setArea] = useState(hp.get("a") ?? "all"); // "all" | "div:Name" | "cell:lat,lon" | "box"
@@ -71,6 +76,7 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
   const [layer, setLayer] = useState<"count" | "zones">("count");
   const [cmp, setCmp] = useState("none"); // Fingerprint comparison area
   const [copied, setCopied] = useState(false);
+  const [showStatic, setShowStatic] = useState(false);
   useEffect(() => { // keep the address bar a shareable link
     const q = new URLSearchParams({ a: area, y0: String(y0), y1: String(y1), s: series, l: lang });
     if (sel) q.set("m", sel); if (area === "box") q.set("b", [box.north, box.south, box.west, box.east].join(","));
@@ -83,7 +89,7 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
   const nameOf = (a: string) => a === "all" ? t("whole") : a.startsWith("div:") ? t("divName", dn(a.slice(4))) : a.startsWith("cell:") ? t("cellLabel", a.slice(5)) : t("customArea");
   const areaName = nameOf(area);
   const inside = useMemo(() => makeInside(area), [area, box, divOf]);
-  const { rows, nCells, cut, minActive } = useMemo(() => analyse(cells, months, inside), [cells, months, inside]);
+  const { rows, nCells, cut, minActive } = useMemo(() => analyse(cells, months, inside, minBase), [cells, months, inside, minBase]);
 
   const grid = useMemo(() => cellTotals(cells, 0, 9999).map((g) => ({ id: `${g.lat},${g.lon}`, lat: g.lat, lon: g.lon, division: divOf.get(`${g.lat},${g.lon}`) ?? null })), [cells, divOf]);
   const mapCells = useMemo(() => cellTotals(cells, y0, y1).map((g) => ({ id: `${g.lat},${g.lon}`, lat: g.lat, lon: g.lon, value: g.n, division: divOf.get(`${g.lat},${g.lon}`) ?? null })), [cells, y0, y1, divOf]);
@@ -113,7 +119,7 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
   const spark = shown.map((r, i) => `${((i / Math.max(1, shown.length - 1)) * 600).toFixed(1)},${(38 - Math.sqrt(r.count / max) * 34).toFixed(1)}`).join(" ");
 
   // ---- Zones ----
-  const zoneRes = useMemo(() => analyseZones(cells, months, y0, y1), [cells, months, y0, y1]);
+  const zoneRes = useMemo(() => analyseZones(series === "frp" ? rawCells : cells, months, y0, y1), [cells, rawCells, series, months, y0, y1]);
   const zoneById = useMemo(() => new Map(zoneRes.zones.map((z) => [z.id, z])), [zoneRes]);
   const zoneCells: MapCell[] = grid.map((g) => { const z = zoneById.get(g.id); return { ...g, value: 0, note: z ? `${t("zk_" + z.kind)}${z.ratio >= 1 && (z.kind === "emerging" || z.kind === "both") ? ` · ${z.ratio.toFixed(1)}×` : ""}` : undefined }; });
   const recur = zoneRes.zones.filter((z) => z.kind === "recurring" || z.kind === "both"), emerg = zoneRes.zones.filter((z) => z.kind === "emerging" || z.kind === "both");
@@ -121,6 +127,10 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
   const topRec = [...recur].sort((a, b) => b.active / b.years - a.active / a.years || b.recent - a.recent).slice(0, 5);
   const seasonName = `${sh[(zoneRes.season[0] ?? 1) - 1]}–${sh[(zoneRes.season[2] ?? 3) - 1]}`;
   const showZones = layer === "zones";
+  const staticCells = useMemo(() => { const m = new Map<string, { id: string; lat: number; lon: number; n: number }>(); let tot = 0;
+    for (const s of statics ?? []) { const y = +s.month.slice(0, 4); if (y < y0 || y > y1) continue; const id = `${s.cell_lat},${s.cell_lon}`; const e = m.get(id) ?? { id, lat: s.cell_lat, lon: s.cell_lon, n: 0 }; e.n += s.static; tot += s.static; m.set(id, e); }
+    return { cells: [...m.values()], tot }; }, [statics, y0, y1]);
+  const serKey = series === "harmonized" ? "serHarm" : series === "modis" ? "serModis" : series === "viirs" ? "serViirs" : "serFrp";
   const cellText = (id: string) => `${divOf.get(id) ? dn(divOf.get(id)!) : t("mapBorder")} (${id})`;
 
   // ---- Confidence (years of history, calibrated vs observed, area size, sensor agreement), trend, top contributor, watchlist ----
@@ -143,21 +153,21 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
     return top && top[0] && tot > 0 ? t("whyTop", byCell ? cellText(top[0]) : dn(top[0]), Math.round((top[1] / tot) * 100)) : "";
   })();
   const scored = (b: Band) => b === "Normal" || b === "Elevated" || b === "Extreme";
-  const watch = useMemo(() => cur ? DIVISIONS.map((d) => ({ name: d.name, r: analyse(cells, months, makeInside(`div:${d.name}`)).rows.find((x) => x.key === cur.key) }))
+  const watch = useMemo(() => cur ? DIVISIONS.map((d) => ({ name: d.name, r: analyse(cells, months, makeInside(`div:${d.name}`), minBase).rows.find((x) => x.key === cur.key) }))
     .flatMap((x) => x.r ? [{ name: x.name, r: x.r }] : []).sort((a, b) => (scored(b.r.band) ? 1 : 0) - (scored(a.r.band) ? 1 : 0) || (scored(a.r.band) ? b.r.score - a.r.score : b.r.count - a.r.count)) : [],
     [cells, months, cur?.key, divOf]);
 
   // ---- Fire Fingerprint ----
   const profile = (rs: Row[]) => M12.map((i) => medianOf(rs.filter((r) => r.mon === i + 1).map((r) => r.count)));
   const typical = profile(shown), yearProf = M12.map((i) => shown.find((r) => r.year === cur?.year && r.mon === i + 1)?.count ?? 0);
-  const cmpProf = useMemo(() => cmp === "none" ? null : profile(analyse(cells, months, makeInside(cmp)).rows.filter((r) => r.year >= y0 && r.year <= y1)), [cmp, cells, months, box, divOf, y0, y1]);
+  const cmpProf = useMemo(() => cmp === "none" ? null : profile(analyse(cells, months, makeInside(cmp), minBase).rows.filter((r) => r.year >= y0 && r.year <= y1)), [cmp, cells, months, box, divOf, y0, y1]);
   const total = typical.reduce((a, b) => a + b, 0), peakI = typical.indexOf(Math.max(...typical));
   let ws = 0, wb = -1; for (const i of M12) { const v = (typical[i] ?? 0) + (typical[(i + 1) % 12] ?? 0) + (typical[(i + 2) % 12] ?? 0); if (v > wb) { wb = v; ws = i; } }
   const peakText = total > 0 ? t("fpPeak", mn[peakI] ?? "", Math.round((wb / total) * 100), `${sh[ws]}–${sh[(ws + 2) % 12]}`) : "";
 
   const whyText = (r: Row) => { const m = mn[r.mon - 1] ?? "";
     if (r.band === "No baseline") return t("whyNoBase", m, 5);
-    if (r.band === "Low activity") return t("whyLow", Math.round(r.count), m, Math.round(r.median));
+    if (r.band === "Low activity") return t(series === "frp" ? "whyLowFrp" : "whyLow", Math.round(r.count), m, Math.round(r.median));
     if (r.band === "Normal") return t("whyNormal", r.xMedian.toFixed(1), m);
     return t("whyFlag", r.xMedian.toFixed(1), m, r.rank, r.of); };
   const setNum = (k: keyof AOI, v: string) => { setArea("box"); setBox({ ...box, [k]: parseFloat(v) }); };
@@ -184,7 +194,7 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
       h1{font-size:22px;margin:0}h2{font-size:16px;margin:20px 0 4px}.s{color:#555;font-size:12px}.band{font-size:30px;font-weight:700;margin:4px 0}
       table.kv td{padding:3px 12px 3px 0}table.heat{border-collapse:separate;border-spacing:2px;margin:6px 0}table.heat td{width:30px;height:14px;background:#eee}table.heat th{font-size:10px;font-weight:400;padding-right:6px;text-align:right}
       footer{margin-top:24px;border-top:1px solid #ccc;padding-top:8px;font-size:12px;color:#444}</style></head><body>
-      <h1>${esc(t("repTitle"))}: ${esc(areaName)}</h1><div class="s">${y0}–${y1} · ${esc(new Date().toLocaleDateString())} · ${esc(t(series === "harmonized" ? "serHarm" : series === "modis" ? "serModis" : "serViirs"))}</div>
+      <h1>${esc(t("repTitle"))}: ${esc(areaName)}</h1><div class="s">${y0}–${y1} · ${esc(new Date().toLocaleDateString())} · ${esc(t(serKey))}</div>
       ${body}<h2>${esc(t("calTitle"))}</h2><table class="heat"><tr><th></th>${sh.map((m) => `<th>${esc(m)}</th>`).join("")}</tr>${heat}</table>
       <p class="s">${esc(t("calCal"))}</p>
       <h2>${esc(t("zonesTitle"))}</h2><p>${esc(t("zStatRec"))}: ${recur.length} · ${esc(t("zStatEmg"))}: ${emerg.length} · ${esc(t("zSeason"))}: ${esc(seasonName)}</p>
@@ -202,9 +212,9 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
         <div className="space-y-6">
           <div>
             <div className="eyebrow mb-3">{t("series")}</div>
-            <div className="flex overflow-hidden rounded-sm border border-border font-mono text-[11px]" role="group">
-              {(["harmonized", "modis", "viirs"] as const).map((k) => <button key={k} aria-pressed={series === k} disabled={k !== "harmonized" && !hasRaw} onClick={() => setSeries(k)}
-                className={`flex-1 px-2 py-1.5 disabled:opacity-40 ${series === k ? "bg-fire text-background" : "text-muted-foreground hover:text-foreground"}`}>{t(k === "harmonized" ? "serHarm" : k === "modis" ? "serModis" : "serViirs")}</button>)}
+            <div className="grid grid-cols-2 overflow-hidden rounded-sm border border-border font-mono text-[11px]" role="group">
+              {(["harmonized", "modis", "viirs", "frp"] as const).map((k) => <button key={k} aria-pressed={series === k} disabled={((k === "modis" || k === "viirs") && !hasRaw) || (k === "frp" && !hasFrp)} onClick={() => setSeries(k)}
+                className={`flex-1 px-2 py-1.5 disabled:opacity-40 ${series === k ? "bg-fire text-background" : "text-muted-foreground hover:text-foreground"}`}>{t(k === "harmonized" ? "serHarm" : k === "modis" ? "serModis" : k === "viirs" ? "serViirs" : "serFrp")}</button>)}
             </div>
             {!hasRaw && <p className="mt-2 font-mono text-[10px] text-muted-foreground">{t("serHint")}</p>}
           </div>
@@ -246,11 +256,16 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
                 className={`px-3 py-1.5 ${layer === l ? "bg-fire text-background" : "text-muted-foreground hover:text-foreground"}`}>{t(l === "count" ? "layerCount" : "layerZones")}</button>)}
             </div>
           </div>
-          <BDMap cells={showZones ? zoneCells : (tmCells ?? mapCells)} max={tm ? tmMax : mapMax} unit={tm ? t("unitMonth") : t("unitRange")}
+          <BDMap cells={showZones ? zoneCells : (tmCells ?? mapCells)} max={tm ? tmMax : mapMax} unit={series === "frp" ? t("frpLabel") : tm ? t("unitMonth") : t("unitRange")} overlay={showStatic ? staticCells.cells : undefined}
             division={area.startsWith("div:") ? area.slice(4) : null} cellId={area.startsWith("cell:") ? area.slice(5) : null}
             onDivision={(n) => setArea(n ? `div:${n}` : "all")} onCell={(id) => setArea(`cell:${id}`)}
             colorOf={showZones ? (c) => ZONE_COLOR[zoneById.get(c.id)?.kind ?? "unknown"] : undefined}
             legend={showZones ? <span className="flex flex-wrap items-center gap-3">{(["recurring", "emerging", "both", "none"] as const).map((k) => <span key={k} className="flex items-center gap-1.5">{swatch(ZONE_COLOR[k])}{t("zk_" + k)}</span>)}</span> : undefined} />
+
+          {statics !== null && <label className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            <input type="checkbox" checked={showStatic} disabled={statics.length === 0} onChange={(e) => setShowStatic(e.target.checked)} />
+            {statics.length === 0 ? t("staticNone") : t("staticToggle", staticCells.tot)}
+            {statics.length > 0 && <span className="basis-full text-[10px]">{t("staticNote")}</span>}</label>}
 
           {!showZones && <div className="mt-4 rounded-sm border border-border p-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -330,7 +345,7 @@ function Dashboard({ cells: rawCells, validation }: { cells: Cell[]; validation:
           <p className="mt-4 font-mono text-[10px] leading-relaxed text-muted-foreground">{t("caveat", minActive)}</p>
         </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-          <Stat label={t("detections")} value={Math.round(cur.count).toLocaleString()} tone="fire" />
+          <Stat label={series === "frp" ? t("frpLabel") : t("detections")} value={Math.round(cur.count).toLocaleString()} tone="fire" />
           <Stat label={t("medianOf", sh[cur.mon - 1] ?? "")} value={Math.round(cur.median).toLocaleString()} />
           <Stat label={t("xMedian")} value={cur.band === "No baseline" ? "—" : cur.xMedian.toFixed(2)} tone="fire" />
           <Stat label={t("score")} value={cur.band === "No baseline" ? "—" : cur.score.toFixed(2)} />
