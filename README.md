@@ -13,7 +13,7 @@ FireLens is an interactive Earth observation and fire intelligence platform that
 Instead of only showing fire locations, FireLens compares current activity with long-term historical patterns, detects unusual behavior, explains why an anomaly is occurring, and helps identify which areas may need attention first.
 
 ---
-**Live app**: https://pixel-perfect-render-76051.lovable.app
+**Live app**: [https://pixel-perfect-render-76051.lovable.app](https://firelens-peach.vercel.app/)
 
 
 ## 🌍 Project Overview
